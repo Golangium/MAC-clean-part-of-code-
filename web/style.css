@@ -1,0 +1,790 @@
+/* =========================================
+   1. ПЕРЕМЕННЫЕ И БАЗА
+   ========================================= */
+:root {
+    --card-width: 120px;
+    --card-height: 180px;
+    --panel-height: 140px;
+    --font-base: 14px;
+    --touch-target: 48px;
+    
+    /* Цвета и тени */
+    --glass-bg: rgba(255, 255, 255, 0.85);
+    --glass-border: rgba(255, 255, 255, 0.6);
+    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
+    --panel-glass-bg: rgba(20, 24, 35, 0.85);
+    --panel-glass-border: rgba(255, 255, 255, 0.15);
+    --panel-shadow: 0 -8px 40px rgba(0, 0, 0, 0.25), 0 -2px 12px rgba(0, 0, 0, 0.15);
+    --transition-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: linear-gradient(135deg, #f7f4ee 0%, #e6dfd1 100%);
+    overflow: hidden;
+    font-size: var(--font-base);
+    -webkit-text-size-adjust: 100%;
+    position: fixed; width: 100%; height: 100%;
+    color: #1a1a1a;
+}
+
+/* =========================================
+   2. ВЕРТИКАЛЬНОЕ МЕНЮ (PREMIUM GLASS)
+   ========================================= */
+#toolbar {
+    position: fixed !important;
+    left: 20px !important;
+    top: 50% !important;
+    right: auto !important;
+    bottom: auto !important;
+    transform: translateY(-50%) !important;
+    -webkit-transform: translateY(-50%) !important;
+    
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 14px !important;
+    
+    background: var(--glass-bg) !important;
+    backdrop-filter: blur(20px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+    border: 1px solid var(--glass-border) !important;
+    border-radius: 28px !important;
+    box-shadow: var(--glass-shadow) !important;
+    
+    padding: 16px 10px !important;
+    z-index: 200 !important;
+    
+    min-width: 68px !important;
+    max-height: calc(100vh - 40px) !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+}
+#toolbar::-webkit-scrollbar { display: none; }
+
+#toolbar button {
+    width: 52px !important;
+    height: 52px !important;
+    min-width: 52px !important;
+    min-height: 52px !important;
+    
+    border: 1px solid rgba(0,0,0,0.06) !important;
+    background: rgba(255,255,255,0.6) !important;
+    border-radius: 16px !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04) !important;
+    
+    font-size: 22px !important;
+    color: #333 !important;
+    cursor: pointer !important;
+    
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition: all 0.25s var(--transition-smooth) !important;
+}
+
+#toolbar button:hover:not(:disabled) {
+    background: #fff !important;
+    transform: translateY(-3px) scale(1.05) !important;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.1) !important;
+    border-color: rgba(0,0,0,0.1) !important;
+}
+#toolbar button:active:not(:disabled) {
+    transform: translateY(0) scale(0.98) !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06) !important;
+}
+#toolbar button:disabled {
+    opacity: 0.35 !important;
+    cursor: not-allowed !important;
+    background: rgba(0,0,0,0.03) !important;
+}
+
+/* =========================================
+   3. СТОЛ И ХОЛСТ (FULL SCREEN)
+   ========================================= */
+#table-area {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    overflow: hidden;
+    z-index: 1;
+}
+#table-area.panning { cursor: grabbing !important; user-select: none; }
+
+/* Фоны стола */
+#table-area.bg-blue   { background: linear-gradient(135deg, #a8c0e0, #c5d5ea) !important; }
+#table-area.bg-green  { background: linear-gradient(135deg, #b8d9c9, #d4e8d9) !important; }
+#table-area.bg-yellow { background: linear-gradient(135deg, #f0e6b8, #f5ecd4) !important; }
+#table-area.bg-stone  { background: linear-gradient(135deg, #b8b5b0, #d1cec8) !important; }
+#table-area.bg-wood   { background: #c9a97e !important; 
+                        background-image: repeating-linear-gradient(45deg, rgba(0,0,0,0.03) 0, rgba(0,0,0,0.03) 2px, transparent 2px, transparent 4px) !important; }
+
+#canvas {
+    position: absolute;
+    top: 0; left: 0;
+    width: 5000px; height: 5000px;
+    transform-origin: 0 0;
+    cursor: grab;
+    transition: transform 0.1s ease-out;
+    z-index: 2;
+}
+#canvas.panning { cursor: grabbing; transition: none; }
+
+/* =========================================
+   4. КАРТЫ НА СТОЛЕ
+   ========================================= */
+.table-card {
+    position: absolute;
+    width: var(--card-width);
+    height: var(--card-height);
+    border-radius: 14px;
+    cursor: grab;
+    user-select: none;
+    
+    background: transparent !important;
+    background-color: transparent !important;
+    
+    border: 1px solid rgba(255,255,255,0.4);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12), 0 2px 6px rgba(0,0,0,0.08);
+    
+    transform: rotate(0deg) scale(1);
+    transform-origin: center center;
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+    z-index: 10;
+    overflow: hidden;
+    will-change: transform;
+    backface-visibility: hidden;
+    
+    touch-action: none !important;
+    -webkit-touch-callout: none !important;
+    -webkit-tap-highlight-color: transparent !important;
+}
+
+.table-card-inner {
+    width: 100%;
+    height: 100%;
+    border-radius: 14px;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-color: transparent !important;
+}
+
+.table-card.dragging {
+    cursor: grabbing !important;
+    z-index: 100 !important;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.2), 0 4px 10px rgba(0,0,0,0.12) !important;
+}
+.table-card.flipped .table-card-inner {
+    box-shadow: none;
+}
+.layer-badge { display: none !important; }
+
+/* Адаптивные размеры карт */
+@media (max-width: 1024px) { :root { --card-width: 100px; --card-height: 150px; } }
+@media (max-width: 768px) { :root { --card-width: 80px; --card-height: 120px; } }
+@media (max-width: 480px) { :root { --card-width: 70px; --card-height: 105px; } }
+@media (max-height: 500px) and (orientation: landscape) {
+    :root { --card-width: 60px; --card-height: 90px; }
+}
+
+/* =========================================
+   5. КОНТЕКСТНОЕ МЕНЮ
+   ========================================= */
+.context-menu {
+    position: fixed;
+    background: rgba(255,255,255,0.95);
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    border: 1px solid rgba(255,255,255,0.7);
+    border-radius: 20px;
+    box-shadow: 0 16px 48px rgba(0,0,0,0.18);
+    padding: 8px 0;
+    z-index: 300;
+    min-width: 210px; max-width: 90vw;
+    opacity: 0; transform: scale(0.95); transform-origin: top left;
+    transition: opacity 0.2s ease, transform 0.2s var(--transition-smooth);
+    pointer-events: none;
+}
+.context-menu.visible { opacity: 1; transform: scale(1); pointer-events: auto; }
+
+.context-menu button {
+    background: none; border: none; padding: 14px 22px; text-align: left;
+    width: 100%; cursor: pointer; font-size: 15px; color: #1a1a1a;
+    display: flex; align-items: center; gap: 12px; transition: background 0.15s;
+    min-height: var(--touch-target);
+}
+.context-menu button:hover { background: rgba(0,0,0,0.04); }
+.context-menu button:active { background: rgba(0,0,0,0.08); }
+.context-menu .divider { height: 1px; background: rgba(0,0,0,0.08); margin: 6px 0; }
+
+.ctx-control {
+    padding: 14px 22px; border-top: 1px solid rgba(0,0,0,0.06); background: rgba(0,0,0,0.02);
+}
+.ctx-control label { display: block; font-size: 12px; color: #666; margin-bottom: 8px; font-weight: 600; }
+.ctx-control input[type="range"] {
+    width: 100%; height: 6px; background: rgba(0,0,0,0.1); border-radius: 3px; outline: none; -webkit-appearance: none;
+}
+.ctx-control input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 20px; height: 20px; background: #fff;
+    border: 2px solid #4CAF50; border-radius: 50%; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+
+/* Мобильное меню (Bottom Sheet) */
+@media (max-width: 768px) {
+    .context-menu {
+        left: 50% !important; right: auto !important; top: auto !important; bottom: 0 !important;
+        width: 100%; max-width: 100%; border-radius: 24px 24px 0 0;
+        transform: translateX(-50%) translateY(100%) !important;
+        transition: transform 0.35s var(--transition-smooth), opacity 0.2s;
+    }
+    .context-menu.visible { transform: translateX(-50%) translateY(0) !important; }
+    .context-menu button { padding: 18px 24px; font-size: 17px; }
+    .ctx-control { padding: 18px 24px; }
+}
+
+/* =========================================
+   6. НИЖНЯЯ ПАНЕЛЬ
+   ========================================= */
+.card-panel { 
+    position: fixed; 
+    bottom: 0; left: 0; right: 0; 
+    background: var(--panel-glass-bg) !important;
+    backdrop-filter: blur(24px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+    border-top: 1px solid var(--panel-glass-border) !important;
+    box-shadow: var(--panel-shadow) !important;
+    z-index: 200 !important;
+    display: flex; 
+    flex-direction: column;
+    
+    transform: translateY(100%);
+    transition: transform 0.4s var(--transition-smooth);
+    border-top-left-radius: 28px;
+    border-top-right-radius: 28px;
+}
+
+.card-panel.partially-open {
+    transform: translateY(calc(100% - var(--panel-height)));
+    border-top-left-radius: 28px;
+    border-top-right-radius: 28px;
+}
+
+.card-panel.fully-open {
+    transform: translateY(0);
+    top: 0;
+    bottom: 0;
+    height: 100vh;
+    border-radius: 0;
+}
+
+.panel-close-btn {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(107, 143, 126, 0.2);
+    box-shadow: 0 4px 16px rgba(45, 74, 62, 0.1);
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 202;
+    transition: all 0.2s ease;
+}
+.panel-close-btn:hover {
+    background: #fff;
+    transform: scale(1.05);
+}
+.card-panel.fully-open .panel-close-btn {
+    display: flex;
+}
+
+.panel-header {
+    padding: 20px 24px 16px;
+    display: none;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(107, 143, 126, 0.1);
+}
+.card-panel.fully-open .panel-header {
+    display: flex;
+}
+.panel-header h3 {
+    font-family: var(--font-main);
+    font-size: 20px;
+    color: #1a1a1a;
+    margin: 0;
+}
+.card-count {
+    font-size: 14px;
+    color: #6b8f7e;
+    font-weight: 500;
+}
+
+.card-panel-list {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(107, 143, 126, 0.3) transparent;
+}
+
+.card-panel.partially-open .card-panel-list {
+    display: flex;
+    flex-direction: row;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 16px 24px;
+    gap: 14px;
+    align-items: center;
+    scroll-behavior: smooth;
+}
+
+.card-panel.fully-open .card-panel-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    gap: 12px;
+    padding: 80px 24px 24px;
+    overflow-y: auto;
+}
+
+.panel-card {
+    border: 2px solid rgba(255,255,255,0.2) !important;
+    border-radius: 14px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.25) !important;
+    cursor: pointer;
+    background-size: cover;
+    background-position: center;
+    position: relative;
+    transition: all 0.3s var(--transition-smooth) !important;
+    touch-action: manipulation !important;
+    -webkit-tap-highlight-color: transparent !important;
+}
+
+.card-panel.partially-open .panel-card {
+    min-width: 84px;
+    height: 118px;
+    flex-shrink: 0;
+}
+.card-panel.partially-open .panel-card:hover {
+    transform: translateY(-8px) scale(1.04) !important;
+    border-color: rgba(255,255,255,0.5) !important;
+    box-shadow: 0 12px 28px rgba(0,0,0,0.35) !important;
+}
+
+.card-panel.fully-open .panel-card {
+    aspect-ratio: 2/3;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+}
+.card-panel.fully-open .panel-card::before {
+    content: attr(data-number);
+    position: absolute;
+    top: -24px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 12px;
+    font-weight: 600;
+    color: #1a1a1a;
+    background: rgba(255,255,255,0.8);
+    padding: 2px 8px;
+    border-radius: 8px;
+}
+.card-panel.fully-open .panel-card:hover {
+    transform: scale(1.05) !important;
+    border-color: rgba(255,255,255,0.5) !important;
+    box-shadow: 0 12px 28px rgba(0,0,0,0.35) !important;
+}
+.panel-card:active { transform: scale(0.96) !important; }
+
+.panel-toggle {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60px;
+    height: 36px;
+    border-radius: 24px;
+    background: rgba(255, 255, 255, 0.95) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    border: 1px solid rgba(255,255,255,0.8) !important;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.2), 0 2px 8px rgba(0,0,0,0.1) !important;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 201;
+    transition: all 0.3s var(--transition-smooth) !important;
+}
+
+.card-panel:not(.fully-open) .panel-toggle {
+    bottom: 100%;
+    top: auto;
+    border-radius: 24px 24px 0 0;
+}
+
+.card-panel.fully-open .panel-toggle {
+    top: 16px;
+    right: 16px;
+    left: auto;
+    transform: none;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border-bottom: 1px solid rgba(255,255,255,0.8) !important;
+}
+
+.panel-toggle:hover {
+    transform: translateX(-50%) translateY(-4px) !important;
+    box-shadow: 0 10px 32px rgba(0,0,0,0.25) !important;
+    background: #fff !important;
+}
+.panel-toggle:active {
+    transform: translateX(-50%) scale(0.92) !important;
+}
+
+.toggle-arrow svg {
+    width: 22px;
+    height: 22px;
+    stroke: #555 !important;
+    stroke-width: 2.8 !important;
+    fill: none !important;
+    stroke-linecap: round !important;
+    stroke-linejoin: round !important;
+    transition: transform 0.45s cubic-bezier(0.68, -0.55, 0.27, 1.55) !important;
+}
+
+.card-panel.partially-open .toggle-arrow svg,
+.card-panel.fully-open .toggle-arrow svg {
+    transform: rotate(180deg) !important;
+}
+
+/* Адаптив панели */
+@media (max-width: 480px) {
+    .card-panel { border-radius: 24px 24px 0 0 !important; }
+    .panel-card { min-width: 74px; height: 104px; }
+    .panel-toggle { width: 52px; height: 32px; }
+    .toggle-arrow svg { width: 18px; height: 18px; }
+    
+    .card-panel.fully-open .panel-toggle {
+        width: 40px;
+        height: 40px;
+        top: 12px;
+        right: 12px;
+    }
+    .card-panel.fully-open .card-panel-list {
+        grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+        gap: 10px;
+        padding: 70px 16px 16px;
+    }
+    .card-panel.fully-open .panel-card::before {
+        font-size: 10px;
+        top: -20px;
+    }
+}
+@media (max-height: 500px) and (orientation: landscape) {
+    .card-panel { height: 100px; }
+    .panel-card { min-width: 64px; height: 90px; }
+}
+
+/* =========================================
+   7. МОДАЛКИ
+   ========================================= */
+.modal { 
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+    background: rgba(0,0,0,0.35); backdrop-filter: blur(8px); 
+    display: flex; justify-content: center; align-items: center; z-index: 400; padding: 20px;
+}
+.hidden { display: none !important; }
+.modal-content { 
+    background: #fff; padding: 28px; border-radius: 24px; max-width: 480px; width: 100%; text-align: center; 
+    box-shadow: 0 20px 60px rgba(0,0,0,0.25); max-height: 90vh; overflow-y: auto;
+}
+@media (max-width: 480px) {
+    .modal-content { padding: 24px 16px; border-radius: 20px; width: 96vw; max-height: 88vh; }
+    .decks-grid { grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 10px; }
+    .deck-item { padding: 6px; }
+    .bg-grid { grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 10px; }
+    .bg-item { height: 64px; }
+}
+.decks-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 14px; max-height: 320px; overflow-y: auto; margin: 16px 0; }
+.deck-item { border: 1px solid rgba(0,0,0,0.08); padding: 8px; border-radius: 12px; cursor: pointer; transition: 0.2s; }
+.deck-item:hover { background: rgba(0,0,0,0.03); border-color: #4CAF50; }
+.deck-item img { width: 100%; height: auto; border-radius: 8px; }
+.bg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 14px; max-height: 320px; overflow-y: auto; padding: 8px 0; }
+.bg-item { border: 2px solid rgba(0,0,0,0.08); border-radius: 12px; height: 80px; cursor: pointer; transition: all 0.2s; background-size: cover; background-position: center; position: relative; overflow: hidden; }
+.bg-item:hover { border-color: #4CAF50; transform: scale(1.03); }
+.bg-item.active { border-color: #4CAF50; box-shadow: 0 0 0 3px rgba(76,175,80,0.25); }
+.bg-item span { position: absolute; bottom: 0; left: 0; right: 0; padding: 4px; background: rgba(0,0,0,0.6); color: #fff; font-size: 11px; text-align: center; }
+
+/* =========================================
+   8. АВТОРИЗАЦИЯ
+   ========================================= */
+.auth-overlay {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center;
+    z-index: 999999; backdrop-filter: blur(12px); padding: 20px;
+}
+.auth-overlay.hidden { display: none !important; }
+.auth-box {
+    background: #fff; padding: 36px; border-radius: 24px; text-align: center;
+    width: 360px; max-width: 90%; box-shadow: 0 24px 64px rgba(0,0,0,0.35);
+}
+.auth-box h2 { margin: 0 0 24px; color: #1a1a1a; font-size: 22px; }
+.auth-box input { width: 100%; padding: 14px; margin: 16px 0; border: 2px solid #e2e8f0; border-radius: 12px; font-size: 16px; outline: none; min-height: var(--touch-target); transition: border-color 0.2s; }
+.auth-box input:focus { border-color: #4CAF50; }
+.auth-box button { width: 100%; padding: 14px; background: #4CAF50; color: #fff; border: none; border-radius: 12px; cursor: pointer; font-weight: 600; min-height: var(--touch-target); transition: background 0.2s; }
+.auth-box button:hover { background: #45a049; }
+body.auth-pending #admin-content { filter: blur(8px); pointer-events: none; user-select: none; }
+@media (max-width: 480px) { .auth-box { padding: 28px 20px; } .auth-box h2 { font-size: 20px; } }
+
+/* =========================================
+   9. МОБИЛЬНЫЕ УТИЛИТЫ
+   ========================================= */
+button, .deck-item, .bg-item, .panel-card, #context-menu button, input, .ctx-control {
+    touch-action: manipulation !important; -webkit-tap-highlight-color: transparent; cursor: pointer;
+}
+.table-card { touch-action: manipulation; -webkit-tap-highlight-color: transparent; user-select: none; }
+
+@supports (-webkit-touch-callout: none) {
+    .table-card, button, .panel-card { -webkit-tap-highlight-color: transparent; }
+}
+
+/* =========================================
+   10. ОПТИМИЗАЦИИ И ТЁМНАЯ ТЕМА
+   ========================================= */
+@keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+.modal-content, .context-menu.visible { animation: fadeIn 0.25s ease-out; }
+
+#table-area, .card-panel-list { -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+
+@media (max-width: 480px) { :root { --font-base: 13px; } h1, h2 { font-size: 18px !important; } label { font-size: 13px !important; } }
+
+@media (prefers-color-scheme: dark) {
+    body { background: linear-gradient(135deg, #12141a 0%, #0a0c10 100%); color: #e2e8f0; }
+    #toolbar, .modal-content, .auth-box, .context-menu { background: rgba(22, 26, 36, 0.9); color: #e2e8f0; border-color: rgba(255,255,255,0.1); }
+    #toolbar button { background: rgba(255,255,255,0.08); color: #fff; border-color: rgba(255,255,255,0.1); }
+    #toolbar button:hover:not(:disabled) { background: rgba(255,255,255,0.15); }
+    .deck-item, .bg-item { border-color: rgba(255,255,255,0.1); }
+    .deck-item:hover { background: rgba(255,255,255,0.08); }
+    .ctx-control { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.08); }
+    .ctx-control label { color: #94a3b8; }
+    .card-panel { background: rgba(10, 12, 18, 0.9) !important; }
+}
+
+/* =========================================
+   11. МОБИЛЬНЫЕ ЖЕСТЫ (БЕЗ ПОДСКАЗКИ)
+   ========================================= */
+
+/* Скрываем контекстное меню на мобильных */
+@media (max-width: 768px) {
+    #context-menu {
+        display: none !important;
+    }
+    
+    /* Отключаем зум браузера на мобильных */
+    body {
+        touch-action: pan-x pan-y pinch-zoom;
+    }
+}
+
+/* Для очень маленьких экранов */
+@media (max-width: 375px) {
+    :root {
+        --card-width: 65px;
+        --card-height: 98px;
+    }
+}
+
+/* =========================================
+   12. КНОПКА "СОЗДАТЬ СЕССИЮ"
+   ========================================= */
+.btn-primary {
+    touch-action: manipulation !important;
+    -webkit-tap-highlight-color: transparent !important;
+    position: relative !important;
+    z-index: 10 !important;
+    min-height: var(--touch-target) !important;
+    min-width: 200px !important;
+    pointer-events: auto !important;
+    user-select: none !important;
+}
+
+@media (pointer: coarse) {
+    .btn-primary {
+        -webkit-appearance: none !important;
+        appearance: none !important;
+    }
+}
+
+.bg-decor {
+    pointer-events: none !important;
+    z-index: 1 !important;
+}
+
+.hero {
+    position: relative !important;
+    z-index: 2 !important;
+}
+
+/* =========================================
+   13. ТУЛБАР В LANDSCAPE
+   ========================================= */
+@media (max-height: 500px) and (orientation: landscape) and (max-width: 900px) {
+    #toolbar {
+        left: 50% !important;
+        top: auto !important;
+        bottom: 12px !important;
+        transform: translateX(-50%) !important;
+        -webkit-transform: translateX(-50%) !important;
+        
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        justify-content: center !important;
+        align-items: center !important;
+        
+        min-width: auto !important;
+        max-width: calc(100vw - 24px) !important;
+        max-height: none !important;
+        width: auto !important;
+        
+        padding: 10px 16px !important;
+        gap: 8px !important;
+        border-radius: 20px !important;
+    }
+    
+    #toolbar button {
+        width: 40px !important;
+        height: 40px !important;
+        min-width: 40px !important;
+        min-height: 40px !important;
+        font-size: 16px !important;
+        border-radius: 12px !important;
+    }
+}
+
+@media (max-height: 500px) and (orientation: landscape) {
+    .card-panel {
+        height: 100px !important;
+        --panel-height: 100px !important;
+    }
+    .card-panel.partially-open .panel-card {
+        min-width: 64px !important;
+        height: 80px !important;
+    }
+}
+
+/* =========================================
+   14. ФИНАЛЬНЫЙ ФИКС: ТУЛБАР ДЛЯ МОБИЛЬНЫХ
+   ========================================= */
+
+/* Все мобильные устройства */
+@media (max-width: 768px) {
+    #toolbar {
+        left: 6px !important;
+        top: 50% !important;
+        right: auto !important;
+        bottom: auto !important;
+        transform: translateY(-50%) !important;
+        -webkit-transform: translateY(-50%) !important;
+        
+        /* Жёсткая ширина — не может расшириться */
+        width: 56px !important;
+        min-width: 56px !important;
+        max-width: 56px !important;
+        
+        padding: 8px 4px !important;
+        gap: 6px !important;
+        border-radius: 18px !important;
+        max-height: 95vh !important;
+        
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+    
+    #toolbar::-webkit-scrollbar { 
+        display: none !important; 
+    }
+
+    #toolbar button {
+        width: 44px !important;
+        height: 44px !important;
+        min-width: 44px !important;
+        min-height: 44px !important;
+        max-width: 44px !important;
+        
+        font-size: 17px !important;
+        border-radius: 10px !important;
+    }
+}
+
+/* Очень маленькие экраны (iPhone SE, старые Android) */
+@media (max-width: 375px) {
+    #toolbar {
+        left: 4px !important;
+        width: 48px !important;
+        min-width: 48px !important;
+        max-width: 48px !important;
+        padding: 6px 3px !important;
+        gap: 4px !important;
+    }
+    
+    #toolbar button {
+        width: 38px !important;
+        height: 38px !important;
+        min-width: 38px !important;
+        min-height: 38px !important;
+        max-width: 38px !important;
+        font-size: 15px !important;
+        border-radius: 8px !important;
+    }
+}
+
+/* Экстремально маленькие экраны */
+@media (max-width: 320px) {
+    #toolbar {
+        left: 2px !important;
+        width: 42px !important;
+        min-width: 42px !important;
+        max-width: 42px !important;
+        padding: 4px 2px !important;
+        gap: 3px !important;
+    }
+    
+    #toolbar button {
+        width: 34px !important;
+        height: 34px !important;
+        min-width: 34px !important;
+        min-height: 34px !important;
+        max-width: 34px !important;
+        font-size: 13px !important;
+    }
+}
+
+/* ГЛОБАЛЬНЫЙ ЗАПРЕТ ВЫДЕЛЕНИЯ (убирает синее выделение ВЕЗДЕ) */
+body, 
+body * {
+    -webkit-user-select: none !important; /* Safari / Chrome */
+    -moz-user-select: none !important;    /* Firefox */
+    -ms-user-select: none !important;     /* IE / Edge */
+    user-select: none !important;         /* Стандарт */
+    -webkit-touch-callout: none !important; /* Отключает меню при долгом тапе на iOS */
+}
+
+/* РАЗРЕШАЕМ выделение ТОЛЬКО в полях ввода (если они когда-нибудь понадобятся) */
+input, textarea, [contenteditable="true"] {
+    -webkit-user-select: text !important;
+    -moz-user-select: text !important;
+    -ms-user-select: text !important;
+    user-select: text !important;
+    -webkit-touch-callout: default !important;
+}

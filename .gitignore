@@ -1,0 +1,18 @@
+cat > .gitignore << EOF
+# Бинарники Go
+main
+*.exe
+*.so
+*.dylib
+
+# Файлы с паролями
+.env
+
+# Папка загрузок 
+uploads/
+
+# IDE файлы
+.idea/
+.vscode/
+.DS_Store
+EOF
