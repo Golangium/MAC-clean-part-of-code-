@@ -169,7 +169,7 @@ func deleteBackground(c *gin.Context) {
 	c.JSON(200, gin.H{"status": "deleted"})
 }
 
-const ADMIN_PASSWORD = "gcb[jkju"
+const ADMIN_PASSWORD = ""
 
 func adminAuth(c *gin.Context) {
 	var req struct {
